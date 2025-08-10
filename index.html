@@ -742,6 +742,8 @@
 <body>
     <!-- Музыкальная кнопка -->
     <div class="music-control" id="musicControl" title="Включить/выключить музыку">🎵</div>
+    <!-- Дополнительная кнопка для тестирования -->
+    <button onclick="playMusic()" type="button" style="position: fixed; top: 80px; right: 20px; z-index: 1200; padding: 10px 15px; background: linear-gradient(135deg, #ff6b6b, #ffd93d); color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">Играть музыку</button>
     <!-- Ползунок громкости -->
     <div id="volumeWrapper" style="position: fixed; top: 16px; right: 56px; z-index: 1200; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.35); padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.2);">
         <span style="color: #fff; font-size: 14px; user-select: none;">🔈</span>
@@ -913,28 +915,51 @@
         let audioInitialized = false;
 
         function playMusic() {
+            console.log('playMusic вызвана');
+            
+            const audio = document.getElementById('myAudio');
+            if (!audio) {
+                console.log('Аудио элемент не найден');
+                return;
+            }
+            
             // Инициализация для iOS
             if (!audioInitialized) {
-                const audio = document.getElementById('myAudio');
-                audio.load(); // Перезагружаем аудио
+                console.log('Инициализация аудио для iOS');
+                audio.load();
+                audio.muted = false;
+                audio.volume = 0.5;
                 audioInitialized = true;
             }
             
-            const audio = document.getElementById('myAudio');
+            // Для iOS требуется пользовательское взаимодействие
+            audio.currentTime = 0;
             
-            // Попытка воспроизведения
             const playPromise = audio.play();
             
             if (playPromise !== undefined) {
                 playPromise
                     .then(() => {
-                        console.log('Музыка играет');
+                        console.log('✅ Музыка успешно запущена');
+                        isPlaying = true;
                     })
                     .catch(error => {
-                        console.log('Ошибка:', error);
-                        // Повторная попытка через 100мс
-                        setTimeout(() => audio.play(), 100);
+                        console.log('❌ Ошибка воспроизведения:', error.message);
+                        
+                        // Дополнительные попытки для iOS
+                        setTimeout(() => {
+                            console.log('Повторная попытка...');
+                            audio.play().then(() => {
+                                console.log('✅ Повторная попытка успешна');
+                                isPlaying = true;
+                            }).catch(err => {
+                                console.log('❌ Повторная попытка неудачна:', err.message);
+                            });
+                        }, 100);
                     });
+            } else {
+                console.log('Play promise не поддерживается');
+                isPlaying = true;
             }
         }
 
