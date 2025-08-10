@@ -48,7 +48,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: url('2222.jpg') center/cover no-repeat;
+            background: url('photo.jpg') center/cover no-repeat;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -132,7 +132,7 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: url('2222.jpg') center/cover no-repeat;
+            background: url('photo.jpg') center/cover no-repeat;
             display: none;
             justify-content: center;
             align-items: center;
@@ -740,10 +740,7 @@
     </style>
 </head>
 <body>
-    <!-- Музыкальная кнопка -->
-    <div class="music-control" id="musicControl" title="Включить/выключить музыку">🎵</div>
-    <!-- Дополнительная кнопка для тестирования -->
-    <button onclick="playMusic()" type="button" style="position: fixed; top: 80px; right: 20px; z-index: 1200; padding: 10px 15px; background: linear-gradient(135deg, #ff6b6b, #ffd93d); color: white; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">Играть музыку</button>
+
     <!-- Ползунок громкости -->
     <div id="volumeWrapper" style="position: fixed; top: 16px; right: 56px; z-index: 1200; display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.35); padding: 6px 10px; border-radius: 999px; backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.2);">
         <span style="color: #fff; font-size: 14px; user-select: none;">🔈</span>
@@ -764,6 +761,119 @@
         </div>
         <button class="click-button" id="clickButton">Нажми меня! ✨</button>
     </div>
+    
+    <script>
+        // Исправляем обработчики кнопок
+        document.addEventListener('DOMContentLoaded', function() {
+            // Кнопка "Нажми меня!"
+            const btn = document.getElementById('clickButton');
+            if (btn) {
+                btn.onclick = function() {
+                    if (typeof playMusic === 'function') {
+                        playMusic(); // Запускаем музыку
+                    }
+                    document.getElementById('welcomeScreen').style.display = 'none';
+                    document.getElementById('questScreen').style.display = 'flex';
+                };
+            }
+            
+            // Кнопка "Войти"
+            const submitBtn = document.getElementById('submitPassword');
+            const passwordInput = document.getElementById('passwordInput');
+            if (submitBtn && passwordInput) {
+                submitBtn.onclick = function() {
+                    const enteredPassword = passwordInput.value.trim();
+                    const questFeedback = document.getElementById('questFeedback');
+                    const correctPassword = "ozoda2025";
+                    
+                    if (enteredPassword === correctPassword) {
+                        questFeedback.textContent = '✅ Правильно! Добро пожаловать!';
+                        questFeedback.style.color = '#4CAF50';
+                        
+                        setTimeout(() => {
+                            document.getElementById('questScreen').style.display = 'none';
+                            document.getElementById('mainScreen').style.display = 'block';
+                            // Создаем конфетти при входе
+                            if (typeof createConfetti === 'function') {
+                                for (let i = 0; i < 10; i++) {
+                                    setTimeout(() => createConfetti(), i * 100);
+                                }
+                            }
+                        }, 1500);
+                    } else {
+                        questFeedback.textContent = '❌ Неправильный пароль. Попробуйте еще раз!';
+                        questFeedback.style.color = '#f44336';
+                        passwordInput.value = '';
+                        passwordInput.focus();
+                    }
+                };
+                
+                // Обработчик Enter в поле пароля
+                passwordInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        submitBtn.click();
+                    }
+                });
+            }
+            
+            // Исправление карусели
+            const carousel = document.getElementById('carousel');
+            const carouselNext = document.getElementById('carouselNext');
+            const carouselPrev = document.getElementById('carouselPrev');
+            const carouselInner = document.getElementById('carouselInner');
+            const carouselDots = document.getElementById('carouselDots');
+            const carouselCounter = document.getElementById('carouselCounter');
+            
+            if (carousel && carouselNext && carouselPrev && carouselInner) {
+                let currentIndex = 0;
+                const slides = carouselInner.querySelectorAll('.slide');
+                const totalSlides = slides.length;
+                
+                function showSlideFixed(index) {
+                    slides.forEach(slide => slide.classList.remove('active'));
+                    currentIndex = (index + totalSlides) % totalSlides;
+                    slides[currentIndex].classList.add('active');
+                    
+                    if (carouselCounter) {
+                        carouselCounter.textContent = `${currentIndex + 1} / ${totalSlides}`;
+                    }
+                    
+                    // Обновляем точки
+                    if (carouselDots) {
+                        const dots = carouselDots.querySelectorAll('button');
+                        dots.forEach((dot, idx) => {
+                            dot.classList.toggle('active', idx === currentIndex);
+                        });
+                    }
+                }
+                
+                function createDots() {
+                    if (carouselDots) {
+                        carouselDots.innerHTML = '';
+                        slides.forEach((_, i) => {
+                            const dot = document.createElement('button');
+                            if (i === currentIndex) dot.classList.add('active');
+                            dot.addEventListener('click', () => showSlideFixed(i));
+                            carouselDots.appendChild(dot);
+                        });
+                    }
+                }
+                
+                // Инициализация
+                createDots();
+                showSlideFixed(0);
+                
+                // Обработчики кнопок
+                carouselNext.onclick = () => showSlideFixed(currentIndex + 1);
+                carouselPrev.onclick = () => showSlideFixed(currentIndex - 1);
+                
+                // Автопрокрутка
+                setInterval(() => {
+                    showSlideFixed(currentIndex + 1);
+                }, 4000);
+            }
+        });
+    </script>
 
     <!-- Экран с паролем -->
     <div class="quest-screen" id="questScreen">
@@ -835,6 +945,7 @@
                             <img loading="lazy" src="5555555555.jpg" alt="Фото 3" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzIwIiBoZWlnaHQ9IjQwMCIgdmlld0JveD0iMCAwIDcyMCA0MDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjcyMCIgaGVpZ2h0PSI0MDAiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjx0ZXh0IHg9IjM2MCIgeT0iMjAwIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9Im1pZGRsZSIgZm9udC1zaXplPSIzNiI+💫</3RleHQ+PC9zdmc+';">
                             <div class="caption">Балдан таттуу, айдан ажарлуу, гүлдөн назик, күндөн жарык. 💫</div>
                         </div>
+
                     </div>
                     <button class="carousel-prev" id="carouselPrev" aria-label="Предыдущее">❮</button>
                     <button class="carousel-next" id="carouselNext" aria-label="Следующее">❯</button>
@@ -1280,3 +1391,4 @@
     </script>
 </body>
 </html>
+
