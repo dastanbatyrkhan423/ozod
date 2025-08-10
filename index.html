@@ -865,8 +865,8 @@
     </div>
 
     <!-- Аудио файлы -->
-    <audio id="birthdayMusic" loop preload="auto">
-        <source src="https://cdn.freesound.org/previews/316/316847_5123451-lq.mp3" type="audio/mpeg">
+    <audio id="myAudio" loop preload="auto">
+        <source src="music123.mp3" type="audio/mpeg">
         <source src="music11.ogg" type="audio/ogg">
     </audio>
 
@@ -875,7 +875,7 @@
         const questScreen = document.getElementById('questScreen');
         const mainScreen = document.getElementById('mainScreen');
         const clickButton = document.getElementById('clickButton');
-        const birthdayMusic = document.getElementById('birthdayMusic');
+        const birthdayMusic = document.getElementById('myAudio');
         const musicControl = document.getElementById('musicControl');
         const volumeSlider = document.getElementById('volumeSlider');
 
@@ -910,6 +910,33 @@
 
         // Состояние музыки
         let isPlaying = false;
+        let audioInitialized = false;
+
+        function playMusic() {
+            // Инициализация для iOS
+            if (!audioInitialized) {
+                const audio = document.getElementById('myAudio');
+                audio.load(); // Перезагружаем аудио
+                audioInitialized = true;
+            }
+            
+            const audio = document.getElementById('myAudio');
+            
+            // Попытка воспроизведения
+            const playPromise = audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => {
+                        console.log('Музыка играет');
+                    })
+                    .catch(error => {
+                        console.log('Ошибка:', error);
+                        // Повторная попытка через 100мс
+                        setTimeout(() => audio.play(), 100);
+                    });
+            }
+        }
 
         // Массив пожеланий
         const wishes = [
@@ -944,16 +971,9 @@
 
         // Кнопка управления музыкой
         musicControl.addEventListener('click', () => {
-            if (isPlaying) {
-                birthdayMusic.pause();
-                musicControl.textContent = '🎵';
-                musicControl.style.opacity = '0.7';
-            } else {
-                birthdayMusic.play();
-                musicControl.textContent = '🎶';
-                musicControl.style.opacity = '1';
-            }
-            isPlaying = !isPlaying;
+            playMusic();
+            musicControl.textContent = '🎶';
+            musicControl.style.opacity = '1';
         });
 
         // Кнопка "Нажми меня" - переход к экрану с паролем
