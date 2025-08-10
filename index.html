@@ -929,6 +929,7 @@
         // Состояние музыки
         let musicEnabled = false;
         let triedAutoPlay = false;
+        let audioCtx = null;
 
         // Массив пожеланий
         const wishes = [
@@ -963,6 +964,14 @@
         // Кнопка управления музыкой
         musicControl.addEventListener('click', async () => {
             try {
+                // Разблокировка аудио-контекста для iOS
+                if (!audioCtx) {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (Ctx) audioCtx = new Ctx();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    try { await audioCtx.resume(); } catch(_) {}
+                }
                 if (!musicEnabled || birthdayMusic.paused) {
                     await birthdayMusic.play();
                     musicEnabled = true;
@@ -1063,17 +1072,34 @@
         });
 
         // Клик на кнопку - показать экран с паролем
-        clickButton.addEventListener('click', () => {
-            // Попытка запустить музыку при первом взаимодействии
+        clickButton.addEventListener('click', async () => {
+            // Усиленная попытка запустить музыку на iOS
             if (!musicEnabled) {
-                birthdayMusic.play().then(() => {
+                try {
+                    // Создаём/разблокируем AudioContext для iOS
+                    if (!audioCtx) {
+                        const Ctx = window.AudioContext || window.webkitAudioContext;
+                        if (Ctx) audioCtx = new Ctx();
+                    }
+                    if (audioCtx && audioCtx.state === 'suspended') {
+                        await audioCtx.resume();
+                    }
+                    
+                    // Несколько попыток запуска
+                    birthdayMusic.muted = false;
+                    birthdayMusic.volume = 0.4;
+                    await birthdayMusic.play();
+                    
                     musicEnabled = true;
                     musicControl.textContent = '🎵';
                     musicControl.title = 'Выключить музыку';
                     hideAudioHint();
-                }).catch(() => {
-                    console.log('Автозапуск музыки заблокирован');
-                });
+                    console.log('Музыка запущена на iOS!');
+                } catch (error) {
+                    console.log('Не удалось запустить музыку:', error);
+                    // Показываем подсказку если не получилось
+                    if (isIOS) showAudioHint();
+                }
             }
 
             welcomeScreen.classList.add('fade-out');
@@ -1150,6 +1176,14 @@
         async function tryEnableMusicOnce() {
             if (musicEnabled) return cleanupGestureListeners();
             try {
+                // Разблокировка WebAudio (повышает шанс старта на iOS)
+                if (!audioCtx) {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (Ctx) audioCtx = new Ctx();
+                }
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    try { await audioCtx.resume(); } catch(_) {}
+                }
                 await birthdayMusic.play();
                 musicEnabled = true;
                 musicControl.textContent = '🎵';
