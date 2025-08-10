@@ -604,6 +604,25 @@
             justify-content: center;
         }
 
+        /* Подсказка включения музыки (iOS и др.) */
+        .audio-hint {
+            position: fixed;
+            left: 50%;
+            bottom: 20px;
+            transform: translateX(-50%);
+            z-index: 9999;
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.25);
+            backdrop-filter: blur(8px);
+            font-size: 0.95rem;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+            display: none;
+            user-select: none;
+        }
+
         /* Музыкальная кнопка */
         .music-control {
             position: fixed;
@@ -745,6 +764,8 @@
         <span style="color: #fff; font-size: 14px; user-select: none;">🔈</span>
         <input id="volumeSlider" type="range" min="0" max="100" value="40" style="appearance: none; width: 140px; height: 6px; border-radius: 999px; background: linear-gradient(90deg,#667eea,#764ba2); outline: none; box-shadow: 0 0 0 1px rgba(255,255,255,0.25) inset;" aria-label="Громкость музыки" />
     </div>
+    <!-- Подсказка для включения музыки -->
+    <div id="audioHint" class="audio-hint">Нажмите в любое место, чтобы включить музыку 🎵</div>
 
     <!-- Простые декорации -->
     <div class="decoration star1">⭐</div>
@@ -907,6 +928,7 @@
 
         // Состояние музыки
         let musicEnabled = false;
+        let triedAutoPlay = false;
 
         // Массив пожеланий
         const wishes = [
@@ -937,6 +959,25 @@
                 birthdayMusic.volume = v;
                 try { localStorage.setItem('volume', String(v)); } catch(_) {}
             });
+
+        // Кнопка управления музыкой
+        musicControl.addEventListener('click', async () => {
+            try {
+                if (!musicEnabled || birthdayMusic.paused) {
+                    await birthdayMusic.play();
+                    musicEnabled = true;
+                    musicControl.textContent = '🎵';
+                    musicControl.title = 'Выключить музыку';
+                    hideAudioHint();
+                } else {
+                    birthdayMusic.pause();
+                    musicControl.textContent = '🔇';
+                    musicControl.title = 'Включить музыку';
+                }
+            } catch (e) {
+                console.log('Не удалось воспроизвести/поставить на паузу:', e);
+            }
+        });
         }
 
         // --- Логика карусели ---
@@ -1016,8 +1057,9 @@
         });
 
         // Закрытие модального окна
+        // Закрытие модального окна (дубль на всякий случай)
         closeModal.addEventListener('click', () => {
-            photoModal.style.display = 'none';
+            closePhotoModal();
         });
 
         // Клик на кнопку - показать экран с паролем
@@ -1028,6 +1070,7 @@
                     musicEnabled = true;
                     musicControl.textContent = '🎵';
                     musicControl.title = 'Выключить музыку';
+                    hideAudioHint();
                 }).catch(() => {
                     console.log('Автозапуск музыки заблокирован');
                 });
@@ -1093,6 +1136,45 @@
             }, 800);
         }
 
+        // --- Подсказка и однократный запуск музыки на iOS ---
+        const audioHint = document.getElementById('audioHint');
+        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+        function showAudioHint() {
+            if (audioHint && !musicEnabled) audioHint.style.display = 'block';
+        }
+        function hideAudioHint() {
+            if (audioHint) audioHint.style.display = 'none';
+        }
+
+        async function tryEnableMusicOnce() {
+            if (musicEnabled) return cleanupGestureListeners();
+            try {
+                await birthdayMusic.play();
+                musicEnabled = true;
+                musicControl.textContent = '🎵';
+                musicControl.title = 'Выключить музыку';
+                hideAudioHint();
+                cleanupGestureListeners();
+            } catch (_) {
+                // still blocked
+            }
+        }
+
+        function cleanupGestureListeners() {
+            window.removeEventListener('click', tryEnableMusicOnce);
+            window.removeEventListener('touchstart', tryEnableMusicOnce);
+            window.removeEventListener('keydown', tryEnableMusicOnce);
+        }
+
+        // Показываем подсказку только на iOS, пока музыка не включена
+        if (isIOS) {
+            showAudioHint();
+            window.addEventListener('click', tryEnableMusicOnce, { passive: true });
+            window.addEventListener('touchstart', tryEnableMusicOnce, { passive: true });
+            window.addEventListener('keydown', tryEnableMusicOnce);
+        }
+
         // Функция показа случайного пожелания
         function showWish() {
             const wishText = document.getElementById('wishText');
@@ -1112,18 +1194,59 @@
             }
         }
 
+        // --- Конфетти ---
+        function createConfetti() {
+            const emojis = ['🎉','✨','🎊','💫','🌟','💖'];
+            const el = document.createElement('span');
+            el.className = 'confetti';
+            el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            el.style.left = Math.random() * 100 + 'vw';
+            const duration = 3 + Math.random() * 3;
+            el.style.animationDuration = duration + 's';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), duration * 1000);
+        }
+
+        // --- Открытие фото в модальном окне ---
+        function openPhotoModalAt(idx) {
+            currentPhotoIndex = idx;
+            const src = photoItems[currentPhotoIndex]?.getAttribute('src');
+            if (!src) return;
+            modalImage.src = src;
+            photoModal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+        function closePhotoModal() {
+            photoModal.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+        function showPrevPhoto() {
+            currentPhotoIndex = (currentPhotoIndex - 1 + photoItems.length) % photoItems.length;
+            modalImage.src = photoItems[currentPhotoIndex].getAttribute('src');
+        }
+        function showNextPhoto() {
+            currentPhotoIndex = (currentPhotoIndex + 1) % photoItems.length;
+            modalImage.src = photoItems[currentPhotoIndex].getAttribute('src');
+        }
+
+        prevModal.addEventListener('click', (e) => { e.stopPropagation(); showPrevPhoto(); });
+        nextModal.addEventListener('click', (e) => { e.stopPropagation(); showNextPhoto(); });
+        closeModal.addEventListener('click', (e) => { e.stopPropagation(); closePhotoModal(); });
+
 
         // Закрытие модального окна по клику вне изображения
         photoModal.addEventListener('click', (e) => {
             if (e.target === photoModal) {
-                photoModal.style.display = 'none';
+                closePhotoModal();
             }
         });
 
         // Закрытие модального окна по нажатию Escape
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && photoModal.style.display === 'flex') {
-                photoModal.style.display = 'none';
+            if (photoModal.style.display === 'flex') {
+                if (e.key === 'Escape') closePhotoModal();
+                if (e.key === 'ArrowLeft') showPrevPhoto();
+                if (e.key === 'ArrowRight') showNextPhoto();
             }
         });
 
